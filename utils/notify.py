@@ -18,6 +18,20 @@ class NotificationKit:
 		self.feishu_webhook = os.getenv('FEISHU_WEBHOOK')
 		self.weixin_webhook = os.getenv('WEIXIN_WEBHOOK')
 
+	def _check_response(self, response: httpx.Response):
+		response.raise_for_status()
+		try:
+			data = response.json()
+			errcode = data.get('errcode')
+			code = data.get('code')
+			if errcode not in (None, 0) or code not in (None, 0, 200):
+				raise ValueError(f"API Error: {data}")
+		except ValueError as e:
+			if "API Error" in str(e):
+				raise
+			# Not JSON or no error field, ignore
+			pass
+
 	def send_email(self, title: str, content: str, msg_type: Literal['text', 'html'] = 'text'):
 		if not self.email_user or not self.email_pass or not self.email_to:
 			raise ValueError('Email configuration not set')
@@ -40,7 +54,8 @@ class NotificationKit:
 
 		data = {'token': self.pushplus_token, 'title': title, 'content': content, 'template': 'html'}
 		with httpx.Client(timeout=30.0) as client:
-			client.post('http://www.pushplus.plus/send', json=data)
+			response = client.post('https://www.pushplus.plus/send', json=data)
+			self._check_response(response)
 
 	def send_serverPush(self, title: str, content: str):
 		if not self.server_push_key:
@@ -48,7 +63,8 @@ class NotificationKit:
 
 		data = {'title': title, 'desp': content}
 		with httpx.Client(timeout=30.0) as client:
-			client.post(f'https://sctapi.ftqq.com/{self.server_push_key}.send', json=data)
+			response = client.post(f'https://sctapi.ftqq.com/{self.server_push_key}.send', json=data)
+			self._check_response(response)
 
 	def send_dingtalk(self, title: str, content: str):
 		if not self.dingding_webhook:
@@ -56,7 +72,8 @@ class NotificationKit:
 
 		data = {'msgtype': 'text', 'text': {'content': f'{title}\n{content}'}}
 		with httpx.Client(timeout=30.0) as client:
-			client.post(self.dingding_webhook, json=data)
+			response = client.post(self.dingding_webhook, json=data)
+			self._check_response(response)
 
 	def send_feishu(self, title: str, content: str):
 		if not self.feishu_webhook:
@@ -70,7 +87,8 @@ class NotificationKit:
 			},
 		}
 		with httpx.Client(timeout=30.0) as client:
-			client.post(self.feishu_webhook, json=data)
+			response = client.post(self.feishu_webhook, json=data)
+			self._check_response(response)
 
 	def send_wecom(self, title: str, content: str):
 		if not self.weixin_webhook:
@@ -78,7 +96,8 @@ class NotificationKit:
 
 		data = {'msgtype': 'text', 'text': {'content': f'{title}\n{content}'}}
 		with httpx.Client(timeout=30.0) as client:
-			client.post(self.weixin_webhook, json=data)
+			response = client.post(self.weixin_webhook, json=data)
+			self._check_response(response)
 
 	def push_message(self, title: str, content: str, msg_type: Literal['text', 'html'] = 'text'):
 		notifications = [
