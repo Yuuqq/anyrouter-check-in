@@ -81,7 +81,6 @@ async def get_waf_cookies_with_playwright(account_name: str, login_url: str):
 				args=[
 					'--disable-blink-features=AutomationControlled',
 					'--disable-dev-shm-usage',
-					'--disable-web-security',
 					'--disable-features=VizDisplayCompositor',
 					'--no-sandbox',
 				],
@@ -191,13 +190,8 @@ def execute_check_in(client, account_name: str, provider_config, headers: dict):
 				print(f'[FAILED] {account_name}: Check-in failed - {error_msg}')
 				return False
 		except json.JSONDecodeError:
-			# 如果不是 JSON 响应，检查是否包含成功标识
-			if 'success' in response.text.lower():
-				print(f'[SUCCESS] {account_name}: Check-in successful!')
-				return True
-			else:
-				print(f'[FAILED] {account_name}: Check-in failed - Invalid response format')
-				return False
+			print(f'[FAILED] {account_name}: Check-in failed - Invalid response format')
+			return False
 	else:
 		print(f'[FAILED] {account_name}: Check-in failed - HTTP {response.status_code}')
 		return False
